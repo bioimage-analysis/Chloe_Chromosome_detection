@@ -1,1 +1,1 @@
-__all__=['visualization', 'load_data', 'build_classifier']
+__all__=['visualization', 'load_data', 'build_classifier', 'search']

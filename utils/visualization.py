@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from ipywidgets import interact
 from sklearn.model_selection import learning_curve
 from sklearn.model_selection import ShuffleSplit
+from skimage.filters import gaussian
 
 def browse_images_overlay(image, image2):
     x, y, z = image.shape
@@ -122,3 +123,13 @@ def plot_learning_curve(dat, Y, estimator, title = "linear SVC"):
     _plot_learning_curve(estimator, title, dat, Y, (0.7, 1.01), cv=cv, n_jobs=4)
 
     plt.show()
+
+def heatmap(result, image, window_z_step=4):
+    z,x,y = image.shape
+
+    heat_map = np.zeros((z,x,y))
+    for i in range(0,len(heat_map),window_z_step):
+        step = result[np.where(result[:,2]==i)]
+        for res in step:
+            heat_map[i, int(res[1])+35,int(res[0])+35] = res[3]
+    return gaussian(heat_map, sigma=4)
