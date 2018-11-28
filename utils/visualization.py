@@ -22,7 +22,22 @@ def browse_images(image):
         plt.show()
     interact(view_image, i=(0,z-1),continuous_update=False)
 
+def browse_blobs(image, blobs):
+    z, x, y = image.shape
+    def view_image(i):
+        fig, ax = plt.subplots(1, 1, figsize=(8, 8))
+        ax.imshow(image[i], vmax=0.3)
+        for blob in blobs:
+            z,x,y,s = blob
+            if z ==i:
+                ax.scatter(y, x, s=s*50, facecolors='none', edgecolors='r')
+        plt.show()
+    interact(view_image, i=(0,z-1),continuous_update=False)
+
 def plot_mosaic(X, title):
+    '''
+    title: list of len X
+    '''
     Nbr_row_col = int(np.ceil(np.sqrt(len(X))))
     # set up the figure
     fig = plt.figure(figsize=(10, 10))  # figure size in inches

@@ -115,3 +115,56 @@ def binary(box, image):
 
     #Remove extra padding
     return(binary[:,:,15:z+15])
+
+def binary_select_foci(box, image, masked):
+    ellip_base = ellipsoid(35, 35, 35, spacing=(1.05, 1.05, 2.1), levelset=False).astype("int")
+
+    pts = np.transpose(np.nonzero(ellip_base))
+    z,x,y = image.shape
+    # Need to add some extra padding around the z axis
+    liste = []
+    for i in range(len(box)):
+        binary = np.zeros((x, y, z+30))
+        mask = np.copy(masked)
+        binary[pts[:,0]+box[i,1].astype(int),
+               pts[:,1]+box[i,0].astype(int),
+               pts[:,2]+box[i,4].astype(int)] = 1
+        binary = binary[:,:,15:z+15].transpose(2,0,1)
+        mask[~binary.astype(bool)] = 0
+        liste.append(np.squeeze(np.dstack((np.where(mask>0)[0],
+                                np.where(mask>0)[1],
+                                np.where(mask>0)[2],
+                                np.full(len(np.where(mask>0)[0]), i)))))
+
+    #Remove extra padding
+    return(np.vstack(liste))
+
+def find_duplicate(selected_blobs):
+    unq, unq_idx, unq_cnt = np.unique(selected_blobs[:,0:3],
+                                      axis=0,
+                                      return_inverse=True,
+                                      return_counts=True)
+    cnt_mask = unq_cnt > 1
+    #duplicate
+    dup_ids = unq[cnt_mask]
+    cnt_idx, = np.nonzero(cnt_mask)
+    idx_mask = np.in1d(unq_idx, cnt_idx)
+    idx_idx, = np.nonzero(idx_mask)
+    srt_idx = np.argsort(unq_idx[idx_mask])
+    # Duplicate indexes
+    dup_idx = np.split(idx_idx[srt_idx], np.cumsum(unq_cnt[cnt_mask])[:-1])
+    # Find number of blobs per nucleus
+    num, cts = np.unique(selected_blobs[:,3], return_counts=True)
+    # mask of duplicate
+    index = np.arange(0,max(selected_blobs[:,3])+1,1)
+    mask = np.in1d(index, np.unique(selected_blobs[np.asarray(dup_idx)][:,:,3]))
+    return(num, cts, dup_idx, mask)
+
+def remove_duplicate(cts, dup_idx, selected_blobs):
+    new_cts = np.copy(cts)
+    for dupl in selected_blobs[np.asarray(dup_idx)][:,:,3]:
+        if new_cts[dupl[0]] > new_cts[dupl[1]]:
+            new_cts[dupl[0]] = new_cts[dupl[0]] - 1
+        elif new_cts[dupl[0]] <= new_cts[dupl[1]]:
+            new_cts[dupl[1]] = new_cts[dupl[1]] - 1
+    return(new_cts)
