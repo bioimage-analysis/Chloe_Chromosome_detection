@@ -42,6 +42,10 @@ cd to the notebook directory and lunch jupyter notebook:
 jupyter notebook
 ```
 
+## Note about Notebook in github
+
+If it doesn't load try using this [link](https://nbviewer.jupyter.org/).
+
 ## Contact
 Cedric Espenel  
 E-mail: espenel@stanford.edu
