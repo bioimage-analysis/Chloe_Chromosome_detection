@@ -7,8 +7,9 @@ from skimage import morphology
 from skimage.filters import gaussian
 from scipy.ndimage import uniform_filter
 from sklearn.neighbors import KDTree
+from sklearn.cluster import MiniBatchKMeans
 from skimage.feature import blob_dog
-from skimage.filters import threshold_li
+from skimage.filters import threshold_otsu
 import matplotlib.pyplot as plt
 from scipy.spatial import distance
 import re
@@ -39,7 +40,9 @@ def background_correct(image, ch=3, size =20):
 
 def binarization(image):
     data = image.ravel().reshape(1,-1)
-    kmeans = KMeans(n_clusters=2, random_state=0, n_jobs=4).fit(data.T)
+    kmeans = MiniBatchKMeans(init='k-means++',n_clusters=2, batch_size=10000, 
+                             n_init=10, max_no_improvement=10, verbose=0).fit(data.T)
+    #kmeans = KMeans(n_clusters=2, random_state=0, n_jobs=-1).fit(data.T)
     binary = kmeans.labels_.reshape(image.shape)
     #cluster can be "reverse" background = 1 and foreground = 0
     if np.count_nonzero(binary) > np.count_nonzero(1 - binary):
@@ -49,7 +52,7 @@ def binarization(image):
     return(binary)
 
 def find_blob(img, smaller = 1, largest = 5, thresh = 60, view=True):
-    threshold = int((threshold_li(img)*thresh)/100)
+    threshold = int((threshold_otsu(img)*thresh)/100)
     blobs = blob_dog(img,  min_sigma=smaller,
                      max_sigma=largest, threshold=threshold)
     if view:
