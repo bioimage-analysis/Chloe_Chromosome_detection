@@ -180,7 +180,7 @@ def plot_background(image, ch1, ch2, ch3):
             axes[1,0].plot(image[slices,pos,:,channel], color='r', linestyle='-');
             axes[1,1].plot(ch3[slices,pos,:], color='r', linestyle='-');
 
-def plot_result(img, results, bbox_ML,bb_mask,  cts, num, meta, directory, save = False):
+def plot_result(img, results, bbox_ML,bb_mask,  cts, num, meta, directory, save = False, plot = True):
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
     ax.imshow(np.amax(img,axis=0), vmax=img.max()/2, alpha = 0.8)
     for blob in results:
@@ -193,6 +193,8 @@ def plot_result(img, results, bbox_ML,bb_mask,  cts, num, meta, directory, save 
         ax.text(coord[0]+15,coord[1], "Cell_{}".format(str(cell)),color = 'r', weight='bold')
         ax.text(coord[0]+15,coord[1]+35, "{} COSA-1".format(str(val)),color = 'w', weight='bold')
     plt.legend([circles1, loci], ["Found Chromosome", "FOCI"],loc=0,fontsize='small')
+    if plot ==False:
+        plt.close(fig)
 
     if save:
         try:

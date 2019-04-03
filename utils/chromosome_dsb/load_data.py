@@ -93,7 +93,7 @@ def stage_position(path):
     #return position, time_point, variance
     return position, time_point
 
-def load_bioformats(path, channel = None):
+def load_bioformats(path, channel = None, no_meta_direct = False):
     meta = metadata(path)
 
     if channel:
@@ -114,7 +114,10 @@ def load_bioformats(path, channel = None):
                                                      index=None, rescale=False, wants_max_intensity=False,
                                                      channel_names=None)
 
-    return(np.squeeze(image), meta, _new_directory(path, meta))
+    if no_meta_direct == True:
+        return(np.squeeze(image))
+    else:
+        return(np.squeeze(image), meta, _new_directory(path, meta))
 
 def _new_directory(path, meta):
 

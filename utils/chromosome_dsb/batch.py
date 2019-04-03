@@ -2,11 +2,11 @@ import os
 import time
 import javabridge
 import bioformats
-from chromosome_dsb import *
 from skimage.filters import roberts
 import numpy as np
 
-def batch_analysis(path, clf, scaler, parameters = {}):
+def batch_analysis(path, clf, scaler, skelete, parameters = {}):
+    from chromosome_dsb import load_data, search, img_analysis, visualization
 
     """Go through evry image files in the directory (path).
     Parameters
@@ -27,6 +27,8 @@ def batch_analysis(path, clf, scaler, parameters = {}):
 
     imfilelist=[os.path.join(path,f) for f in os.listdir(path) if f.endswith(imageformat)]
     for file in imfilelist:
+        print('\n')
+        print("###############################")
         print("working on {}".format(file))
         tp1 = time.time()
         javabridge.start_vm(class_path=bioformats.JARS)
@@ -34,9 +36,11 @@ def batch_analysis(path, clf, scaler, parameters = {}):
         image, meta, directory = load_data.load_bioformats(file)
         img = image[:,:,:,3]
         # Check image quality
+        print("check image quality")
         var = roberts(np.amax(img, axis=0)).var()
         if var <= 2e+07:
-            return
+            print("quality not good")
+            continue
         # Find the chromosome
         print("searching nucleus")
         result = search.rolling_window(img, clf, scaler)
@@ -47,7 +51,7 @@ def batch_analysis(path, clf, scaler, parameters = {}):
         ch2, _ = img_analysis.background_correct(image, ch=2, size=back_sub_ch2)
         ch3, _ = img_analysis.background_correct(image, ch=3, size=back_sub_ch3)
         # Find the FOCI
-        print("find blobs")
+        print("finding FOCI")
         blobs = img_analysis.find_blob(ch1, smaller = smaller,
                                    largest = largest, thresh = thresh,
                                    view=True)
@@ -55,11 +59,11 @@ def batch_analysis(path, clf, scaler, parameters = {}):
         # Binarization of the chromosome
         print('image binarization')
         binary = img_analysis.binarization(ch3)
-        # Mask LOCI that are not on the chromosome
+        # Mask FOCI that are not on the chromosome
         masked = img_analysis.find_foci(blobs, ch3, binary)
-        # Mask LOCI that are not on a chromosome found by the Machine Learning
+        # Mask FOCI that are not on a chromosome found by the Machine Learning
         res, bb_mask = search.binary_select_foci(bbox_ML, ch3, masked)
-        # Find and remove LOCI that were counted twice
+        # Find and remove FOCI that were counted twice
         num, cts, dup_idx, mask = search.find_duplicate(res)
         visualization.plot_result(img, res, bbox_ML, bb_mask,\
                               cts, num, meta, directory, save = True, plot = False)
@@ -68,4 +72,4 @@ def batch_analysis(path, clf, scaler, parameters = {}):
                              dist_tip, cts, num, \
                              directory, save = True)
         tp2 = time.time()
-        print("It took {}sec to analyse it".format(file, (tp2-tp1)))
+        print("It took {}sec to analyse it".format((tp2-tp1)))

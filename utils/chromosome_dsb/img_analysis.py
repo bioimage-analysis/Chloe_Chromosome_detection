@@ -40,7 +40,7 @@ def background_correct(image, ch=3, size =20):
 
 def binarization(image):
     data = image.ravel().reshape(1,-1)
-    kmeans = MiniBatchKMeans(init='k-means++',n_clusters=2, batch_size=10000, 
+    kmeans = MiniBatchKMeans(init='k-means++',n_clusters=2, batch_size=10000,
                              n_init=10, max_no_improvement=10, verbose=0).fit(data.T)
     #kmeans = KMeans(n_clusters=2, random_state=0, n_jobs=-1).fit(data.T)
     binary = kmeans.labels_.reshape(image.shape)
