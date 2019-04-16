@@ -215,36 +215,38 @@ def _binary(box, image):
 
 def find_foci(blobs, ch1, ch3, binary, bbox_ML):
 
-    blob_im = np.zeros(ch1.shape, dtype=np.int)
-    blob_im[(blobs[:,0]).astype(np.int),
-            (blobs[:,1]).astype(np.int),
-            (blobs[:,2]).astype(np.int)] = np.arange(len(blobs[:,1])) + 1
+    if len(blobs)>0:
+        blob_im = np.zeros(ch1.shape, dtype=np.int)
+        blob_im[(blobs[:,0]).astype(np.int),
+                (blobs[:,1]).astype(np.int),
+                (blobs[:,2]).astype(np.int)] = np.arange(len(blobs[:,1])) + 1
+        dilated = morphology.dilation(blob_im, morphology.ball(3))
 
-    dilated = morphology.dilation(blob_im, morphology.ball(3))
+        prop = measure.regionprops(dilated)
 
-    prop = measure.regionprops(dilated)
+        re_labeled_blobs = np.zeros(blob_im.shape)
+        # Binary is the binary image of the chromosomes
+        mask = np.copy(binary)
+        # Create binary image of ellipsoid at nucleus position
+        elli = _binary(bbox_ML, ch3)
+        # Remove chromosome/nuclues not found with the ML
+        mask[~elli.astype(bool)] = 0
+        blobs_new = []
+        for region in prop:
+            #Create array when binary and blobs touch (instead of just using the center)
+            cross_blob_binary = mask[list((tuple(region.coords[:,0]), tuple(region.coords[:,1]), tuple(region.coords[:,2])))]
+            if (cross_blob_binary==1).any():
+                re_labeled_blobs[tuple(region.coords.T)] = 1
+                blobs_new.append(region.centroid)
 
-    re_labeled_blobs = np.zeros(blob_im.shape)
-    # Binary is the binary image of the chromosomes
-    mask = np.copy(binary)
-    # Create binary image of ellipsoid at nucleus position
-    elli = _binary(bbox_ML, ch3)
-    # Remove chromosome/nuclues not found with the ML
-    mask[~elli.astype(bool)] = 0
-    blobs_new = []
-    for region in prop:
-        #Create array when binary and blobs touch (instead of just using the center)
-        cross_blob_binary = mask[list((tuple(region.coords[:,0]), tuple(region.coords[:,1]), tuple(region.coords[:,2])))]
-        if (cross_blob_binary==1).any():
-            re_labeled_blobs[tuple(region.coords.T)] = 1
-            blobs_new.append(region.centroid)
+        blobs_new = np.asarray(blobs_new).astype(int)
 
-    blobs_new = np.asarray(blobs_new).astype(int)
-
-    blobs_new_im = np.zeros(ch3.shape, dtype=np.int)
-    blobs_new_im[(blobs_new[:,0]).astype(np.int),
-                 (blobs_new[:,1]).astype(np.int),
-                 (blobs_new[:,2]).astype(np.int)] = np.arange(len(blobs_new[:,1])) + 1
+        blobs_new_im = np.zeros(ch3.shape, dtype=np.int)
+        blobs_new_im[(blobs_new[:,0]).astype(np.int),
+                     (blobs_new[:,1]).astype(np.int),
+                     (blobs_new[:,2]).astype(np.int)] = np.arange(len(blobs_new[:,1])) + 1
+    else:
+        blobs_new_im = np.zeros(ch1.shape, dtype=np.int)
 
     return(blobs_new_im)
 

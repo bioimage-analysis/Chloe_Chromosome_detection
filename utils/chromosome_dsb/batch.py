@@ -41,41 +41,46 @@ def batch_analysis(path, clf, scaler, folder_batch, skelete, parameters = {}):
         image, meta, directory = load_data.load_bioformats(file, folder_batch)
         img = image[:,:,:,3]
         # Check image quality
-        print("check image quality")
-        var = roberts(np.amax(img, axis=0)).var()
-        if var <= 7e+06:
-            print("quality not good")
-            continue
+        #print("check image quality")
+        #var = roberts(np.amax(img, axis=0)).var()
+        #if var <= 7e+06:
+        #    print("quality not good")
+        #    continue
         # Find the chromosome
         print("searching nucleus")
         result = search.rolling_window(img, clf, scaler)
         bbox_ML = search.non_max_suppression(result, probaThresh=0.01, overlapThresh=0.3)
-        #Substract background
-        print("substract background")
-        ch1, _ = img_analysis.background_correct(image, ch=1, size=back_sub_ch1)
-        ch2, _ = img_analysis.background_correct(image, ch=2, size=back_sub_ch2)
-        ch3, _ = img_analysis.background_correct(image, ch=3, size=back_sub_ch3)
-        # Find the FOCI
-        print("finding FOCI")
-        blobs = img_analysis.find_blob(ch1, meta, directory, smaller = smaller,
-                               largest = largest, thresh = thresh,
-                               plot=False, save=True)
+        if len(bbox_ML)>0:
+            #Substract background
+            print("substract background")
+            ch1, _ = img_analysis.background_correct(image, ch=1, size=back_sub_ch1)
+            ch2, _ = img_analysis.background_correct(image, ch=2, size=back_sub_ch2)
+            ch3, _ = img_analysis.background_correct(image, ch=3, size=back_sub_ch3)
+            # Find the FOCI
+            print("finding FOCI")
+            blobs = img_analysis.find_blob(ch1, meta, directory, smaller = smaller,
+                                   largest = largest, thresh = thresh,
+                                   plot=False, save=True)
 
-        # Binarization of the chromosome
-        print('image binarization')
-        binary = img_analysis.binarization(ch3)
-        # Mask FOCI that are not on the chromosome
-        masked = search.find_foci(blobs, ch1, ch3, binary, bbox_ML)
-        # Mask FOCI that are not on a chromosome found by the Machine Learning
-        res, bb_mask = search.binary_select_foci(bbox_ML, ch3, masked)
-        # Find and remove FOCI that were counted twice
-        num, cts, dup_idx, mask = search.find_duplicate(res, bb_mask)
-        visualization.plot_result(img, res, bbox_ML, \
-                              cts, num, meta, directory, save = True, plot = False)
-        dist_tip = img_analysis.distance_to_tip(bbox_ML, skelete, meta)
-        df = img_analysis.final_table(meta, bbox_ML,\
-                             dist_tip, cts, num, \
-                             directory, save = True)
+            # Binarization of the chromosome
+            print('image binarization')
+            binary = img_analysis.binarization(ch3)
+            # Mask FOCI that are not on the chromosome
+            masked = search.find_foci(blobs, ch1, ch3, binary, bbox_ML)
+            # Mask FOCI that are not on a chromosome found by the Machine Learning
+            res, bb_mask = search.binary_select_foci(bbox_ML, ch3, masked)
+            # Find and remove FOCI that were counted twice
+            num, cts, dup_idx, mask = search.find_duplicate(res, bb_mask)
+            visualization.plot_result(img, res, bbox_ML, \
+                                  cts, num, meta, directory, save = True, plot = False)
+            dist_tip = img_analysis.distance_to_tip(bbox_ML, skelete, meta)
+            df = img_analysis.final_table(meta, bbox_ML,\
+                                 dist_tip, cts, num, \
+                                 directory, save = True)
+        else:
+            dist_tip = img_analysis.distance_to_tip_no_nucleus(skelete, meta)
+            df = img_analysis.final_table_no_nucleus(meta, dist_tip, directory, save = True)
+
         final_data.append(df)
 
         tp2 = time.time()

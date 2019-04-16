@@ -99,7 +99,7 @@ def distance_to_tip(point, skeleton, meta):
     return distance_tip
 
 def final_table(meta, bbox_ML, dist_tip, cts, num, directory, save = False):
-    ID = re.findall(r"\d\d(?=_D3D)", meta["Name"])
+    ID = re.findall(r"\d+(?=_D3D)", meta["Name"])
     ID_array = np.repeat(ID, len(bbox_ML))
     chro_pos = np.squeeze(np.dstack((bbox_ML[:,0]+35,
                           bbox_ML[:,1]+35, bbox_ML[:,4])))
@@ -114,6 +114,34 @@ def final_table(meta, bbox_ML, dist_tip, cts, num, directory, save = False):
     df["distance from tip in um"] = dist_tip.astype("int")
     df["Numbers of FOCI"] = cts
     df["cell number on image"] = num
+
+    if save == True:
+        try:
+            df.to_csv(directory+'/'+'{}.csv'.format(meta["Name"]))
+        except FileNotFoundError:
+            df.to_csv('{}.csv'.format(meta["Name"]))
+    return df
+
+def distance_to_tip_no_nucleus(skeleton, meta):
+    coords = np.asarray((meta['PositionX'], meta['PositionY'])).reshape(1,2)
+    tree = KDTree(skeleton)
+    #point = np.array([[10445, 9855]])
+    distance_tip = np.empty(len(coords))
+    for i, coord in enumerate(coords):
+        closest_dist, closest_id = tree.query(coord[np.newaxis, :] , k=1)
+        dist = distance.cdist(skeleton, skeleton, 'euclidean')[0][closest_id] + closest_dist
+        distance_tip[i] = dist
+    return distance_tip
+
+def final_table_no_nucleus(meta, dist_tip, directory, save = False):
+    ID = re.findall(r"\d+(?=_D3D)", meta["Name"])
+    coords = np.asarray((meta['PositionX'], meta['PositionY'])).reshape(1,2)
+    df = pd.DataFrame(ID, columns = ['Image ID'])
+    df["Chromosome position y,x,z"] = np.nan
+    df["Chromosome position in stage coordinate"] = list(map(tuple, coords.astype("int")))
+    df["distance from tip in um"] = dist_tip.astype("int")
+    df["Numbers of FOCI"] = 0
+    df["cell number on image"] = 0
 
     if save == True:
         try:
