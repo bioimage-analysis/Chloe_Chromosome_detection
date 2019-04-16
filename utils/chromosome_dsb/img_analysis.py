@@ -3,7 +3,7 @@ from skimage import io
 from scipy import ndimage
 import numpy as np
 from sklearn.cluster import KMeans
-from skimage import morphology
+
 from skimage.filters import gaussian
 from scipy.ndimage import uniform_filter
 from sklearn.neighbors import KDTree
@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial import distance
 import re
 import pandas as pd
+
 
 def roll_ball(img, ch=3, size =20):
     result = np.empty(img.shape)
@@ -31,7 +32,6 @@ def background_correct(image, ch=3, size =20):
     img = image[:,:,:,ch]
 
     gauss = gaussian(img, sigma=5)
-    size = 5
     background = uniform_filter(gauss, size)
     img_cor = img - background
 
@@ -51,32 +51,39 @@ def binarization(image):
     #binary = morphology.opening(binary, morphology.ball(2))
     return(binary)
 
-def find_blob(img, smaller = 1, largest = 5, thresh = 60, view=True):
-    threshold = int((threshold_otsu(img)*thresh)/100)
+def find_blob(img, meta, directory, smaller = 1, largest = 5, thresh = 60, plot=True, save=False):
+    #threshold = int((threshold_otsu(img)*thresh)/100)
+
     blobs = blob_dog(img,  min_sigma=smaller,
-                     max_sigma=largest, threshold=threshold)
-    if view:
+                     max_sigma=largest, threshold=thresh)
+    if plot == True:
         fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-        ax.imshow(np.amax(img, axis=0), vmax=img.max()/2)
-        ax.axis('off')
-        ax.set_title("detected blobs seen on max int projection")
+        ax.imshow(np.amax(img,axis=0), vmax=img.max(), alpha = 0.8)
         for blob in blobs:
             z,x,y,s = blob
-            ax.scatter(y, x, s=s*50, facecolors='none', edgecolors='r')
+            loci = ax.scatter(y, x, s=10, facecolors='none', edgecolors='y')
+        if save:
+            try:
+                filename = meta['Name']+"FOCI"+'.pdf'
+                plt.savefig(directory+'/'+filename, transparent=True)
+            except FileNotFoundError:
+                plt.savefig(filename, transparent=True)
+    elif plot ==False:
+        plt.ioff()
+        fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+        ax.imshow(np.amax(img,axis=0), vmax=img.max(), alpha = 0.8)
+        for blob in blobs:
+            z,x,y,s = blob
+            loci = ax.scatter(y, x, s=10, facecolors='none', edgecolors='y')
+        if save:
+            try:
+                filename = meta['Name']+"_FOCI"+'.pdf'
+                plt.savefig(directory+'/'+filename, transparent=True)
+            except FileNotFoundError:
+                plt.savefig(filename, transparent=True)
+        plt.close(fig)
+
     return blobs
-
-def find_foci(blobs, image, binary):
-    blob_im = np.zeros(image.shape, dtype=np.int)
-    blob_im[(blobs[:,0]).astype(np.int),
-            (blobs[:,1]).astype(np.int),
-            (blobs[:,2]).astype(np.int)] = np.arange(len(blobs[:,1])) + 1
-
-    #before = morphology.dilation(blob_im, morphology.ball(3))
-    masked = np.copy(blob_im)
-    masked[~binary.astype(bool)] = 0
-    #masked[~mask_nucleus.astype(bool)] = 0
-    #after = morphology.dilation(masked, morphology.ball(3))
-    return(masked)
 
 def distance_to_tip(point, skeleton, meta):
     coords = np.copy(point[:,0:2])
@@ -91,13 +98,19 @@ def distance_to_tip(point, skeleton, meta):
         distance_tip[i] = dist
     return distance_tip
 
-def final_table(meta, bbox_ML,bb_mask, dist_tip, cts, num, directory, save = False):
+def final_table(meta, bbox_ML, dist_tip, cts, num, directory, save = False):
     ID = re.findall(r"\d\d(?=_D3D)", meta["Name"])
-    ID_array = np.repeat(ID, len(bbox_ML[bb_mask]))
-    chro_pos = np.squeeze(np.dstack((bbox_ML[bb_mask][:,0]+35,
-                          bbox_ML[bb_mask][:,1]+35, bbox_ML[bb_mask][:,4])))
+    ID_array = np.repeat(ID, len(bbox_ML))
+    chro_pos = np.squeeze(np.dstack((bbox_ML[:,0]+35,
+                          bbox_ML[:,1]+35, bbox_ML[:,4])))
+
+    coords = np.copy(bbox_ML[:,0:2])
+    coords[:,0] = (bbox_ML[:,0]+35)*meta['PhysicalSizeX'] + meta['PositionX']-19
+    coords[:,1] = (480 - (bbox_ML[:,1]+35))*meta['PhysicalSizeY'] + meta['PositionY']-19
+
     df = pd.DataFrame(ID_array, columns = ['Image ID'])
     df["Chromosome position y,x,z"] = list(map(tuple, chro_pos.astype("int")))
+    df["Chromosome position in stage coordinate"] = list(map(tuple, coords.astype("int")))
     df["distance from tip in um"] = dist_tip.astype("int")
     df["Numbers of FOCI"] = cts
     df["cell number on image"] = num

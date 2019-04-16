@@ -3,6 +3,8 @@ from skimage.feature import hog
 from skimage.draw import ellipsoid
 from skimage import util
 import joblib
+from skimage import morphology
+from skimage import measure
 
 
 def _task_predict(window, clf, scaler):
@@ -196,7 +198,7 @@ def non_max_suppression(result, probaThresh=0.1, overlapThresh=0.3):
 
 '''
 
-def binary(box, image):
+def _binary(box, image):
     ellip_base = ellipsoid(35, 35, 35, spacing=(1.05, 1.05, 2.1), levelset=False).astype("int")
 
     pts = np.transpose(np.nonzero(ellip_base))
@@ -211,7 +213,42 @@ def binary(box, image):
     #Remove extra padding
     return(binary[:,:,15:z+15].transpose(2,0,1))
 
-def binary_select_foci(box, image, masked):
+def find_foci(blobs, ch1, ch3, binary, bbox_ML):
+
+    blob_im = np.zeros(ch1.shape, dtype=np.int)
+    blob_im[(blobs[:,0]).astype(np.int),
+            (blobs[:,1]).astype(np.int),
+            (blobs[:,2]).astype(np.int)] = np.arange(len(blobs[:,1])) + 1
+
+    dilated = morphology.dilation(blob_im, morphology.ball(3))
+
+    prop = measure.regionprops(dilated)
+
+    re_labeled_blobs = np.zeros(blob_im.shape)
+    # Binary is the binary image of the chromosomes
+    mask = np.copy(binary)
+    # Create binary image of ellipsoid at nucleus position
+    elli = _binary(bbox_ML, ch3)
+    # Remove chromosome/nuclues not found with the ML
+    mask[~elli.astype(bool)] = 0
+    blobs_new = []
+    for region in prop:
+        #Create array when binary and blobs touch (instead of just using the center)
+        cross_blob_binary = mask[list((tuple(region.coords[:,0]), tuple(region.coords[:,1]), tuple(region.coords[:,2])))]
+        if (cross_blob_binary==1).any():
+            re_labeled_blobs[tuple(region.coords.T)] = 1
+            blobs_new.append(region.centroid)
+
+    blobs_new = np.asarray(blobs_new).astype(int)
+
+    blobs_new_im = np.zeros(ch3.shape, dtype=np.int)
+    blobs_new_im[(blobs_new[:,0]).astype(np.int),
+                 (blobs_new[:,1]).astype(np.int),
+                 (blobs_new[:,2]).astype(np.int)] = np.arange(len(blobs_new[:,1])) + 1
+
+    return(blobs_new_im)
+
+def binary_select_foci(box, image, blobs_new_im):
     ellip_base = ellipsoid(35, 35, 35, spacing=(1.05, 1.05, 2.1), levelset=False).astype("int")
 
     pts = np.transpose(np.nonzero(ellip_base))
@@ -221,17 +258,17 @@ def binary_select_foci(box, image, masked):
     box_mask = []
     for i in range(len(box)):
         binary = np.zeros((x, y, z+30))
-        mask = np.copy(masked)
+        mask = np.copy(blobs_new_im)
         #create elipsoid where Chromosome where found
         binary[pts[:,0]+box[i,1].astype(int),
                pts[:,1]+box[i,0].astype(int),
                pts[:,2]+box[i,4].astype(int)] = 1
         binary = binary[:,:,15:z+15].transpose(2,0,1)
-        # remove every dots where that are not on a chromosome
+        # remove every dots that are not on a chromosome
         mask[~binary.astype(bool)] = 0
 
         if len(np.where(mask>0)[0]) == 0:
-            #liste.append(np.array([[np.nan,np.nan,np.nan,i]]))
+            liste.append(np.array([[np.nan,np.nan,np.nan,i]]))
             box_mask.append(False)
         else:
             box_mask.append(True)
@@ -242,7 +279,7 @@ def binary_select_foci(box, image, masked):
     #Remove extra padding
     return(np.vstack(liste), box_mask)
 
-def find_duplicate(selected_blobs):
+def find_duplicate(selected_blobs, bb_mask):
     unq, unq_idx, unq_cnt = np.unique(selected_blobs[:,0:3],
                                       axis=0,
                                       return_inverse=True,
@@ -258,6 +295,8 @@ def find_duplicate(selected_blobs):
     dup_idx = np.split(idx_idx[srt_idx], np.cumsum(unq_cnt[cnt_mask])[:-1])
     # Find number of blobs per nucleus
     num, cts = np.unique(selected_blobs[:,3], return_counts=True)
+    # count 0 FOCI when we use the inverse of the bb_mask
+    cts[np.logical_not(bb_mask)] = 0
     # mask of duplicate
     index = np.arange(0,max(selected_blobs[:,3])+1,1)
     mask = np.in1d(index, np.unique(selected_blobs[np.asarray(dup_idx)][:,:,3]))
@@ -267,7 +306,7 @@ def find_duplicate(selected_blobs):
 
 def _remove_duplicate(cts, dup_idx, selected_blobs):
     new_cts = np.copy(cts)
-    for dupl in selected_blobs[np.asarray(dup_idx)][:,:,3]:
+    for dupl in selected_blobs[np.asarray(dup_idx)][:,:,3].astype(int):
         if new_cts[dupl[0]] > new_cts[dupl[1]]:
             new_cts[dupl[0]] = new_cts[dupl[0]] - 1
         elif new_cts[dupl[0]] <= new_cts[dupl[1]]:

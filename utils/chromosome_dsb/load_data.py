@@ -93,7 +93,7 @@ def stage_position(path):
     #return position, time_point, variance
     return position, time_point
 
-def load_bioformats(path, channel = None, no_meta_direct = False):
+def load_bioformats(path, folder_batch = "", channel = None, no_meta_direct = False):
     meta = metadata(path)
 
     if channel:
@@ -117,11 +117,55 @@ def load_bioformats(path, channel = None, no_meta_direct = False):
     if no_meta_direct == True:
         return(np.squeeze(image))
     else:
-        return(np.squeeze(image), meta, _new_directory(path, meta))
+        if folder_batch:
+            path = folder_batch
+            return(np.squeeze(image), meta, _new_directory_batch(path, meta))
+        else:
+            return(np.squeeze(image), meta, _new_directory(path, meta))
+
+def _new_directory_batch(path, meta):
+
+
+    directory = path +"/"+"result"+'_'+meta["Name"]+'_'+ time.strftime('%m'+'_'+'%d'+'_'+'%Y')
+
+    if os.path.exists(directory):
+        expand = 0
+        while True:
+            expand += 1
+            new_directory = directory+"_"+str(expand)
+            if os.path.exists(new_directory):
+                continue
+            else:
+                directory = new_directory
+                os.makedirs(directory)
+                break
+    else:
+        os.makedirs(directory)
+    return(directory)
 
 def _new_directory(path, meta):
 
-    directory = os.path.dirname(path)+"/"+"result"+'_'+meta["Name"]+'_'+ time.strftime('%m'+'_'+'%d'+'_'+'%Y')
+
+    directory = os.path.dirname(path) +"/"+"result"+'_'+meta["Name"]+'_'+ time.strftime('%m'+'_'+'%d'+'_'+'%Y')
+
+    if os.path.exists(directory):
+        expand = 0
+        while True:
+            expand += 1
+            new_directory = directory+"_"+str(expand)
+            if os.path.exists(new_directory):
+                continue
+            else:
+                directory = new_directory
+                os.makedirs(directory)
+                break
+    else:
+        os.makedirs(directory)
+    return(directory)
+
+def directory_batch(path):
+    folder = os.path.basename(os.path.normpath(path))
+    directory = os.path.dirname(path)+"/"+"result"+'_'+folder+'_'+ time.strftime('%m'+'_'+'%d'+'_'+'%Y')
     if os.path.exists(directory):
         expand = 0
         while True:
