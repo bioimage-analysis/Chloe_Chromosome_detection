@@ -49,7 +49,7 @@ def batch_analysis(path, clf, scaler, folder_batch, skelete, parameters = {}):
         # Find the chromosome
         print("searching nucleus")
         result = search.rolling_window(img, clf, scaler)
-        bbox_ML = search.non_max_suppression(result, probaThresh=0.01, overlapThresh=0.3)
+        bbox_ML = search.non_max_suppression(result, probaThresh=0.8, overlapThresh=0.3)
         if len(bbox_ML)>0:
             #Substract background
             print("substract background")
@@ -88,7 +88,7 @@ def batch_analysis(path, clf, scaler, folder_batch, skelete, parameters = {}):
 
     batch_result = pd.concat(final_data)
     print("lens of data before removing duplicate = {}".format(len(batch_result )))
-    batch_result.drop_duplicates(subset ="Chromosome position in stage coordinate")
+    batch_result = batch_result.drop_duplicates(subset ="Chromosome position in stage coordinate")
     print("lens of data after removing duplicate = {}".format(len(batch_result )))
     try:
         batch_result.to_csv(folder_batch+'/'+'full.csv')

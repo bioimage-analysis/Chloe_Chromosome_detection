@@ -58,10 +58,10 @@ def find_blob(img, meta, directory, smaller = 1, largest = 5, thresh = 60, plot=
                      max_sigma=largest, threshold=thresh)
     if plot == True:
         fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-        ax.imshow(np.amax(img,axis=0), vmax=img.max(), alpha = 0.8)
+        ax.imshow(np.amax(img,axis=0), vmax=img.max())
         for blob in blobs:
             z,x,y,s = blob
-            loci = ax.scatter(y, x, s=10, facecolors='none', edgecolors='y')
+            loci = ax.scatter(y, x, s=30, facecolors='none', edgecolors='y')
         if save:
             try:
                 filename = meta['Name']+"FOCI"+'.pdf'
@@ -71,10 +71,10 @@ def find_blob(img, meta, directory, smaller = 1, largest = 5, thresh = 60, plot=
     elif plot ==False:
         plt.ioff()
         fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-        ax.imshow(np.amax(img,axis=0), vmax=img.max(), alpha = 0.8)
+        ax.imshow(np.amax(img,axis=0), vmax=img.max())
         for blob in blobs:
             z,x,y,s = blob
-            loci = ax.scatter(y, x, s=10, facecolors='none', edgecolors='y')
+            loci = ax.scatter(y, x, s=30, facecolors='none', edgecolors='y')
         if save:
             try:
                 filename = meta['Name']+"_FOCI"+'.pdf'
@@ -90,12 +90,20 @@ def distance_to_tip(point, skeleton, meta):
     coords[:,0] = (coords[:,0]+35)*meta['PhysicalSizeX'] + meta['PositionX']-19
     coords[:,1] = (480 - (coords[:,1]+35))*meta['PhysicalSizeY'] + meta['PositionY']-19
     tree = KDTree(skeleton)
-    #point = np.array([[10445, 9855]])
+    #accumulated distance from tip
+    dist = []
+    for i in range(len(skeleton)-1):
+        dist.append(distance.cdist(skeleton[i].reshape(1,2), skeleton[i+1].reshape(1,2), 'euclidean'))
+    accumulated_dist = np.copy(dist)
+    for i in range(len(accumulated_dist)-1):
+        accumulated_dist[i+1] = accumulated_dist[i] + accumulated_dist[i+1]
+
+    accumulated_dist = np.pad(accumulated_dist, ((0,1), (0,0), (0,0)), 'edge')
     distance_tip = np.empty(len(coords))
     for i, coord in enumerate(coords):
         closest_dist, closest_id = tree.query(coord[np.newaxis, :] , k=1)
-        dist = distance.cdist(skeleton, skeleton, 'euclidean')[0][closest_id] + closest_dist
-        distance_tip[i] = dist
+        #dist = distance.cdist(skeleton, skeleton, 'euclidean')[0][closest_id] + closest_dist
+        distance_tip[i] = accumulated_dist[closest_id] + closest_dist
     return distance_tip
 
 def final_table(meta, bbox_ML, dist_tip, cts, num, directory, save = False):
@@ -109,7 +117,10 @@ def final_table(meta, bbox_ML, dist_tip, cts, num, directory, save = False):
     coords[:,1] = (480 - (bbox_ML[:,1]+35))*meta['PhysicalSizeY'] + meta['PositionY']-19
 
     df = pd.DataFrame(ID_array, columns = ['Image ID'])
-    df["Chromosome position y,x,z"] = list(map(tuple, chro_pos.astype("int")))
+    if chro_pos.ndim ==1:
+        df["Chromosome position y,x,z"] = list(map(tuple, chro_pos.astype("int").reshape(1,3)))
+    else:
+        df["Chromosome position y,x,z"] = list(map(tuple, chro_pos.astype("int")))
     df["Chromosome position in stage coordinate"] = list(map(tuple, coords.astype("int")))
     df["distance from tip in um"] = dist_tip.astype("int")
     df["Numbers of FOCI"] = cts
@@ -125,12 +136,20 @@ def final_table(meta, bbox_ML, dist_tip, cts, num, directory, save = False):
 def distance_to_tip_no_nucleus(skeleton, meta):
     coords = np.asarray((meta['PositionX'], meta['PositionY'])).reshape(1,2)
     tree = KDTree(skeleton)
-    #point = np.array([[10445, 9855]])
+
+    dist = []
+    for i in range(len(skeleton)-1):
+        dist.append(distance.cdist(skeleton[i].reshape(1,2), skeleton[i+1].reshape(1,2), 'euclidean'))
+    accumulated_dist = np.copy(dist)
+    for i in range(len(accumulated_dist)-1):
+        accumulated_dist[i+1] = accumulated_dist[i] + accumulated_dist[i+1]
+        
+    accumulated_dist = np.pad(accumulated_dist, ((0,1), (0,0), (0,0)), 'edge')
     distance_tip = np.empty(len(coords))
     for i, coord in enumerate(coords):
         closest_dist, closest_id = tree.query(coord[np.newaxis, :] , k=1)
-        dist = distance.cdist(skeleton, skeleton, 'euclidean')[0][closest_id] + closest_dist
-        distance_tip[i] = dist
+        #dist = distance.cdist(skeleton, skeleton, 'euclidean')[0][closest_id] + closest_dist
+        distance_tip[i] = accumulated_dist[closest_id] + closest_dist
     return distance_tip
 
 def final_table_no_nucleus(meta, dist_tip, directory, save = False):

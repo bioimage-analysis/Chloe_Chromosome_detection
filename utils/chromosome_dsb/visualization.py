@@ -183,15 +183,15 @@ def plot_background(image, ch1, ch2, ch3):
 def plot_result(img, results, bbox_ML,cts, num, meta, directory, save = False, plot = True):
     if plot == True:
         fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-        ax.imshow(np.amax(img,axis=0), vmax=img.max(), alpha = 0.8)
+        ax.imshow(np.amax(img,axis=0), vmax=img.max())
         for blob in results:
             z,x,y,s = blob
             loci = ax.scatter(y, x, s=20, facecolors='none', edgecolors='y')
         for coord, val, cell in zip(bbox_ML,cts, num):
             if val == 0:
-                circles1 = patches.Circle((coord[0]+35,coord[1]+35),30, linewidth=3,edgecolor='r',facecolor='none', alpha = 0.2)
+                circles1 = patches.Circle((coord[0]+30,coord[1]+30),30, linewidth=3,edgecolor='r',facecolor='none', alpha = 0.2)
             elif val > 0:
-                circles1 = patches.Circle((coord[0]+35,coord[1]+35),30, linewidth=3,edgecolor='r',facecolor='none')
+                circles1 = patches.Circle((coord[0]+30,coord[1]+30),30, linewidth=3,edgecolor='r',facecolor='none')
             # Add the patch to the Axes
             ax.add_patch(circles1)
             ax.text(coord[0]+15,coord[1], "Cell_{}".format(str(cell)),color = 'r', weight='bold')
@@ -206,15 +206,15 @@ def plot_result(img, results, bbox_ML,cts, num, meta, directory, save = False, p
     elif plot ==False:
         plt.ioff()
         fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-        ax.imshow(np.amax(img,axis=0), vmax=img.max(), alpha = 0.8)
+        ax.imshow(np.amax(img,axis=0), vmax=img.max())
         for blob in results:
             z,x,y,s = blob
             loci = ax.scatter(y, x, s=10, facecolors='none', edgecolors='y')
         for coord, val, cell in zip(bbox_ML,cts, num):
             if val == 0:
-                circles1 = patches.Circle((coord[0]+35,coord[1]+35),30, linewidth=3,edgecolor='r',facecolor='none', alpha = 0.2)
+                circles1 = patches.Circle((coord[0]+30,coord[1]+30),30, linewidth=3,edgecolor='r',facecolor='none', alpha = 0.2)
             elif val > 0:
-                circles1 = patches.Circle((coord[0]+35,coord[1]+35),30, linewidth=3,edgecolor='r',facecolor='none')
+                circles1 = patches.Circle((coord[0]+30,coord[1]+30),30, linewidth=3,edgecolor='r',facecolor='none')
             # Add the patch to the Axes
             ax.add_patch(circles1)
             ax.text(coord[0]+15,coord[1], "Cell_{}".format(str(cell)),color = 'r', weight='bold')

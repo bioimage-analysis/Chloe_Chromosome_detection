@@ -199,7 +199,7 @@ def non_max_suppression(result, probaThresh=0.1, overlapThresh=0.3):
 '''
 
 def _binary(box, image):
-    ellip_base = ellipsoid(35, 35, 35, spacing=(1.05, 1.05, 2.1), levelset=False).astype("int")
+    ellip_base = ellipsoid(30, 30, 30, spacing=(1.05, 1.05, 2.1), levelset=False).astype("int")
 
     pts = np.transpose(np.nonzero(ellip_base))
     z,x,y = image.shape
@@ -238,20 +238,22 @@ def find_foci(blobs, ch1, ch3, binary, bbox_ML):
             if (cross_blob_binary==1).any():
                 re_labeled_blobs[tuple(region.coords.T)] = 1
                 blobs_new.append(region.centroid)
+        if len(blobs_new) == 0:
+            blobs_new_im = np.zeros(ch1.shape, dtype=np.int)
+        else:
+            blobs_new = np.asarray(blobs_new).astype(int)
 
-        blobs_new = np.asarray(blobs_new).astype(int)
-
-        blobs_new_im = np.zeros(ch3.shape, dtype=np.int)
-        blobs_new_im[(blobs_new[:,0]).astype(np.int),
-                     (blobs_new[:,1]).astype(np.int),
-                     (blobs_new[:,2]).astype(np.int)] = np.arange(len(blobs_new[:,1])) + 1
+            blobs_new_im = np.zeros(ch3.shape, dtype=np.int)
+            blobs_new_im[(blobs_new[:,0]).astype(np.int),
+                         (blobs_new[:,1]).astype(np.int),
+                         (blobs_new[:,2]).astype(np.int)] = np.arange(len(blobs_new[:,1])) + 1
     else:
         blobs_new_im = np.zeros(ch1.shape, dtype=np.int)
 
     return(blobs_new_im)
 
 def binary_select_foci(box, image, blobs_new_im):
-    ellip_base = ellipsoid(35, 35, 35, spacing=(1.05, 1.05, 2.1), levelset=False).astype("int")
+    ellip_base = ellipsoid(30, 30, 30, spacing=(1.05, 1.05, 2.1), levelset=False).astype("int")
 
     pts = np.transpose(np.nonzero(ellip_base))
     z,x,y = image.shape
