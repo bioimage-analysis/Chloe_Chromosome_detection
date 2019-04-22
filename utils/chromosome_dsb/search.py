@@ -15,12 +15,14 @@ def _task_predict(window, clf, scaler):
     return(res[:,1])
 
 def rolling_window(image, clf, scaler, stepSize=8, Zstep =4, windowSize = (1,70,70)):
+    z, x, y = image.shape
     rol_view = util.view_as_windows(image, (1,70,70), step=(4,8,8))
     rol_view_flat = rol_view.reshape(-1, 70, 70)
+    a, b, c = rol_view_flat.shape
     list_proba = joblib.Parallel(n_jobs=-1)(joblib.delayed(_task_predict)(window, clf, scaler) for window in rol_view_flat)
     list_proba_array = np.asarray(list_proba)
-    array_proba = np.asarray(list_proba).reshape(21, 52, 52)
-    result = np.zeros((81, 410,410))
+    array_proba = np.asarray(list_proba).reshape(int(a/(52*52)), 52, 52)
+    result = np.zeros((z, x-70,y-70))
     result[::4,::8,::8] = array_proba
     return(result)
 
