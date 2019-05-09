@@ -6,6 +6,25 @@ from skimage.filters import roberts
 import numpy as np
 import pandas as pd
 
+def _remove_duplicated_nucleus(coords):
+    index = []
+    tt_i = [0]
+    for i in range(len(coords)):
+        # Find coordinate that are close (+-3) and hide (delete) the first (tt_i) after every loop then create a mask
+        tt = np.all(np.isclose(coords[i],  np.delete(coords,tt_i, axis=0), atol = 2), axis=1)
+        tt_i.append(i+1)
+        index.append((tt.nonzero()[0]+(i+1)).tolist())
+        # remove dupliacted result_index
+        result_index = np.asarray(list(set([item for sublist in index for item in sublist])))
+        # Create a boolean array with only ones
+        mask = np.ones(len(coords), dtype=bool)
+        # Create the mask
+        try:
+            mask[result_index] = False
+        except IndexError:
+            pass
+    return mask
+
 def batch_analysis(path, clf, scaler, folder_batch, skelete, parameters = {}):
     from chromosome_dsb import load_data, search, img_analysis, visualization
 
@@ -49,7 +68,7 @@ def batch_analysis(path, clf, scaler, folder_batch, skelete, parameters = {}):
         # Find the chromosome
         print("searching nucleus")
         result = search.rolling_window(img, clf, scaler)
-        bbox_ML = search.non_max_suppression(result, probaThresh=0.8, overlapThresh=0.3)
+        bbox_ML = search.non_max_suppression(result, probaThresh=0.5, overlapThresh=0.3)
         if len(bbox_ML)>0:
             #Substract background
             print("substract background")
@@ -88,9 +107,15 @@ def batch_analysis(path, clf, scaler, folder_batch, skelete, parameters = {}):
 
     batch_result = pd.concat(final_data)
     print("lens of data before removing duplicate = {}".format(len(batch_result )))
-    batch_result = batch_result.drop_duplicates(subset ="Chromosome position in stage coordinate")
-    print("lens of data after removing duplicate = {}".format(len(batch_result )))
+
+    coord_stage = batch_result[['Chromosome position z',
+                                'Chromosome position x in stage coordinate',
+                                'Chromosome position y in stage coordinate']].values
+
+    mask = _remove_duplicated_nucleus(coord_stage)
+    #batch_result.drop_duplicates(subset ="Chromosome position in stage coordinate")
+    print("lens of data after removing duplicate = {}".format(len(batch_result[mask])))
     try:
-        batch_result.to_csv(folder_batch+'/'+'full.csv')
+        batch_result[mask].to_csv(folder_batch+'/'+'full.csv')
     except FileNotFoundError:
-        batch_result.to_csv('full.csv')
+        batch_result[mask].to_csv('full.csv')

@@ -58,10 +58,10 @@ def find_blob(img, meta, directory, smaller = 1, largest = 5, thresh = 60, plot=
                      max_sigma=largest, threshold=thresh)
     if plot == True:
         fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-        ax.imshow(np.amax(img,axis=0), vmax=img.max())
+        ax.imshow(np.amax(img,axis=0), vmax=img.max()/1.8)
         for blob in blobs:
             z,x,y,s = blob
-            loci = ax.scatter(y, x, s=30, facecolors='none', edgecolors='y')
+            loci = ax.scatter(y, x, s=40, facecolors='none', edgecolors='y')
         if save:
             try:
                 filename = meta['Name']+"FOCI"+'.pdf'
@@ -71,10 +71,10 @@ def find_blob(img, meta, directory, smaller = 1, largest = 5, thresh = 60, plot=
     elif plot ==False:
         plt.ioff()
         fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-        ax.imshow(np.amax(img,axis=0), vmax=img.max())
+        ax.imshow(np.amax(img,axis=0), vmax=img.max()/1.8)
         for blob in blobs:
             z,x,y,s = blob
-            loci = ax.scatter(y, x, s=30, facecolors='none', edgecolors='y')
+            loci = ax.scatter(y, x, s=40, facecolors='none', edgecolors='y')
         if save:
             try:
                 filename = meta['Name']+"_FOCI"+'.pdf'
@@ -109,6 +109,38 @@ def distance_to_tip(point, skeleton, meta):
 def final_table(meta, bbox_ML, dist_tip, cts, num, directory, save = False):
     ID = re.findall(r"\d+(?=_D3D)", meta["Name"])
     ID_array = np.repeat(ID, len(bbox_ML))
+
+    chro_pos_y = bbox_ML[:,0]+35
+    chro_pos_x = bbox_ML[:,1]+35
+    chro_pos_z = bbox_ML[:,4]
+
+    coords = np.copy(bbox_ML[:,0:2])
+    coords[:,0] = (bbox_ML[:,0]+35)*meta['PhysicalSizeX'] + meta['PositionX']-19
+    coords[:,1] = (480 - (bbox_ML[:,1]+35))*meta['PhysicalSizeY'] + meta['PositionY']-19
+
+    df = pd.DataFrame(ID_array, columns = ['Image ID'])
+    df["Chromosome position x"] = chro_pos_x
+    df["Chromosome position y"] = chro_pos_y
+    df["Chromosome position z"] = chro_pos_z
+
+    df["Chromosome position x in stage coordinate"] = coords[:,0]
+    df["Chromosome position y in stage coordinate"] = coords[:,1]
+
+    df["distance from tip in um"] = dist_tip.astype("int")
+    df["Numbers of FOCI"] = cts
+    df["cell number on image"] = num
+
+    if save == True:
+        try:
+            df.to_csv(directory+'/'+'{}.csv'.format(meta["Name"]))
+        except FileNotFoundError:
+            df.to_csv('{}.csv'.format(meta["Name"]))
+    return df
+
+'''
+def final_table(meta, bbox_ML, dist_tip, cts, num, directory, save = False):
+    ID = re.findall(r"\d+(?=_D3D)", meta["Name"])
+    ID_array = np.repeat(ID, len(bbox_ML))
     chro_pos = np.squeeze(np.dstack((bbox_ML[:,0]+35,
                           bbox_ML[:,1]+35, bbox_ML[:,4])))
 
@@ -132,6 +164,7 @@ def final_table(meta, bbox_ML, dist_tip, cts, num, directory, save = False):
         except FileNotFoundError:
             df.to_csv('{}.csv'.format(meta["Name"]))
     return df
+'''
 
 def distance_to_tip_no_nucleus(skeleton, meta):
     coords = np.asarray((meta['PositionX'], meta['PositionY'])).reshape(1,2)
@@ -143,7 +176,7 @@ def distance_to_tip_no_nucleus(skeleton, meta):
     accumulated_dist = np.copy(dist)
     for i in range(len(accumulated_dist)-1):
         accumulated_dist[i+1] = accumulated_dist[i] + accumulated_dist[i+1]
-        
+
     accumulated_dist = np.pad(accumulated_dist, ((0,1), (0,0), (0,0)), 'edge')
     distance_tip = np.empty(len(coords))
     for i, coord in enumerate(coords):
@@ -152,6 +185,34 @@ def distance_to_tip_no_nucleus(skeleton, meta):
         distance_tip[i] = accumulated_dist[closest_id] + closest_dist
     return distance_tip
 
+def final_table_no_nucleus(meta, dist_tip, directory, save = False):
+
+    ID = re.findall(r"\d+(?=_D3D)", meta["Name"])
+
+    chro_pos_y = np.nan
+    chro_pos_x = np.nan
+    chro_pos_z = np.nan
+
+    df = pd.DataFrame(ID, columns = ['Image ID'])
+    df["Chromosome position x"] = chro_pos_x
+    df["Chromosome position y"] = chro_pos_y
+    df["Chromosome position z"] = chro_pos_z
+
+    df["Chromosome position x in stage coordinate"] = int(meta['PositionX'])
+    df["Chromosome position y in stage coordinate"] = int(meta['PositionY'])
+
+    df["distance from tip in um"] = dist_tip.astype("int")
+    df["Numbers of FOCI"] = 0
+    df["cell number on image"] = 0
+
+    if save == True:
+        try:
+            df.to_csv(directory+'/'+'{}.csv'.format(meta["Name"]))
+        except FileNotFoundError:
+            df.to_csv('{}.csv'.format(meta["Name"]))
+    return df
+
+'''
 def final_table_no_nucleus(meta, dist_tip, directory, save = False):
     ID = re.findall(r"\d+(?=_D3D)", meta["Name"])
     coords = np.asarray((meta['PositionX'], meta['PositionY'])).reshape(1,2)
@@ -168,3 +229,4 @@ def final_table_no_nucleus(meta, dist_tip, directory, save = False):
         except FileNotFoundError:
             df.to_csv('{}.csv'.format(meta["Name"]))
     return df
+'''
