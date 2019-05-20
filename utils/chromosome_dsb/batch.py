@@ -44,7 +44,7 @@ def batch_analysis(path, clf, scaler, folder_batch, skelete, parameters = {}):
     back_sub_Nucleus= parameters.get('back_sub_Nucleus')
     smaller= parameters.get('smaller')
     largest= parameters.get('largest')
-    thresh= parameters.get('thresh')
+    thresh= parameters.get('threshold')
 
     imfilelist=[os.path.join(path,f) for f in os.listdir(path) if f.endswith(imageformat)]
 
