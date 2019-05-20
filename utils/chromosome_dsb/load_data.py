@@ -70,7 +70,7 @@ def stage_position(path):
     time_point = []
     variance = []
     boxes = []
-    for files in glob(path + '*ALX.dv'):
+    for files in glob(path + '/'+ '*ALX.dv'):
         meta = metadata(files)
         position.append((meta['PositionX'], meta['PositionY']))
         time_point.append(int(meta['Timepoint']))
@@ -165,7 +165,7 @@ def _new_directory(path, meta):
 
 def directory_batch(path):
     folder = os.path.basename(os.path.normpath(path))
-    directory = os.path.dirname(path)+"/"+"result"+'_'+folder+'_'+ time.strftime('%m'+'_'+'%d'+'_'+'%Y')
+    directory = path+"/"+"result"+'_'+folder+'_'+ time.strftime('%m'+'_'+'%d'+'_'+'%Y')
     if os.path.exists(directory):
         expand = 0
         while True:

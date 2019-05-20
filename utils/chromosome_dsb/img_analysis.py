@@ -57,11 +57,12 @@ def find_blob(img, meta, directory, smaller = 1, largest = 5, thresh = 60, plot=
     blobs = blob_dog(img,  min_sigma=smaller,
                      max_sigma=largest, threshold=thresh)
     if plot == True:
-        fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-        ax.imshow(np.amax(img,axis=0), vmax=img.max()/1.8)
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 10))
+        ax1.imshow(np.amax(img,axis=0), vmax=img.max()/1.8)
+        ax2.imshow(np.amax(img,axis=0), vmax=img.max()/1.8)
         for blob in blobs:
             z,x,y,s = blob
-            loci = ax.scatter(y, x, s=40, facecolors='none', edgecolors='y')
+            loci = ax2.scatter(y, x, s=40, facecolors='none', edgecolors='y')
         if save:
             try:
                 filename = meta['Name']+"FOCI"+'.pdf'
@@ -70,11 +71,12 @@ def find_blob(img, meta, directory, smaller = 1, largest = 5, thresh = 60, plot=
                 plt.savefig(filename, transparent=True)
     elif plot ==False:
         plt.ioff()
-        fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-        ax.imshow(np.amax(img,axis=0), vmax=img.max()/1.8)
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 10))
+        ax1.imshow(np.amax(img,axis=0), vmax=img.max()/1.8)
+        ax2.imshow(np.amax(img,axis=0), vmax=img.max()/1.8)
         for blob in blobs:
             z,x,y,s = blob
-            loci = ax.scatter(y, x, s=40, facecolors='none', edgecolors='y')
+            loci = ax2.scatter(y, x, s=40, facecolors='none', edgecolors='y')
         if save:
             try:
                 filename = meta['Name']+"_FOCI"+'.pdf'

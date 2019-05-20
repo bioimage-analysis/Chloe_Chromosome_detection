@@ -38,9 +38,10 @@ def batch_analysis(path, clf, scaler, folder_batch, skelete, parameters = {}):
     """
 
     imageformat= ('D3D_ALX.dv')
-    back_sub_ch1= parameters.get('back_sub_ch1')
-    back_sub_ch2= parameters.get('back_sub_ch2')
-    back_sub_ch3= parameters.get('back_sub_ch3')
+    FOCI_ch= parameters.get('FOCI_ch')
+    Nucleus_ch= parameters.get('Nucleus_ch')
+    back_sub_FOCI =parameters.get('back_sub_FOCI')
+    back_sub_Nucleus= parameters.get('back_sub_Nucleus')
     smaller= parameters.get('smaller')
     largest= parameters.get('largest')
     thresh= parameters.get('thresh')
@@ -58,7 +59,7 @@ def batch_analysis(path, clf, scaler, folder_batch, skelete, parameters = {}):
         javabridge.start_vm(class_path=bioformats.JARS)
         print("opening data")
         image, meta, directory = load_data.load_bioformats(file, folder_batch)
-        img = image[:,:,:,3]
+        img = image[:,:,:,Nucleus_ch]
         # Check image quality
         #print("check image quality")
         #var = roberts(np.amax(img, axis=0)).var()
@@ -68,26 +69,25 @@ def batch_analysis(path, clf, scaler, folder_batch, skelete, parameters = {}):
         # Find the chromosome
         print("searching nucleus")
         result = search.rolling_window(img, clf, scaler)
-        bbox_ML = search.non_max_suppression(result, probaThresh=0.5, overlapThresh=0.3)
+        bbox_ML = search.non_max_suppression(result, probaThresh=0.8, overlapThresh=0.3)
         if len(bbox_ML)>0:
             #Substract background
             print("substract background")
-            ch1, _ = img_analysis.background_correct(image, ch=1, size=back_sub_ch1)
-            ch2, _ = img_analysis.background_correct(image, ch=2, size=back_sub_ch2)
-            ch3, _ = img_analysis.background_correct(image, ch=3, size=back_sub_ch3)
+            FOCI, _ = img_analysis.background_correct(image, ch=FOCI_ch, size=back_sub_FOCI)
+            Nucleus, _ = img_analysis.background_correct(image, ch=Nucleus_ch, size=back_sub_Nucleus)
             # Find the FOCI
             print("finding FOCI")
-            blobs = img_analysis.find_blob(ch1, meta, directory, smaller = smaller,
+            blobs = img_analysis.find_blob(FOCI, meta, directory, smaller = smaller,
                                    largest = largest, thresh = thresh,
                                    plot=False, save=True)
 
             # Binarization of the chromosome
             print('image binarization')
-            binary = img_analysis.binarization(ch3)
+            binary = img_analysis.binarization(Nucleus)
             # Mask FOCI that are not on the chromosome
-            masked = search.find_foci(blobs, ch1, ch3, binary, bbox_ML)
+            masked = search.find_foci(blobs, FOCI, Nucleus, binary, bbox_ML)
             # Mask FOCI that are not on a chromosome found by the Machine Learning
-            res, bb_mask = search.binary_select_foci(bbox_ML, ch3, masked)
+            res, bb_mask = search.binary_select_foci(bbox_ML, Nucleus, masked)
             # Find and remove FOCI that were counted twice
             num, cts, dup_idx, mask = search.find_duplicate(res, bb_mask)
             visualization.plot_result(img, res, bbox_ML, \
@@ -115,7 +115,8 @@ def batch_analysis(path, clf, scaler, folder_batch, skelete, parameters = {}):
     mask = _remove_duplicated_nucleus(coord_stage)
     #batch_result.drop_duplicates(subset ="Chromosome position in stage coordinate")
     print("lens of data after removing duplicate = {}".format(len(batch_result[mask])))
+    file_name = os.path.basename(os.path.normpath(path))
     try:
-        batch_result[mask].to_csv(folder_batch+'/'+'full.csv')
+        batch_result[mask].to_csv(folder_batch+'/'+ file_name + '.csv')
     except FileNotFoundError:
-        batch_result[mask].to_csv('full.csv')
+        batch_result[mask].to_csv(file_name + '.csv')

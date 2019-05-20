@@ -153,10 +153,10 @@ def heatmap(result):
 
     return gaussian(heat_map, sigma=4)
 
-def plot_background(image, ch1, ch2, ch3):
+def plot_background(image, ch1, ch2):
     z, x, y, _ = image.shape
     @widgets.interact(
-        channel=[1, 2, 3], pos=(0, y-1), slices = (0,z-1))
+        channel=[1, 2], pos=(0, y-1), slices = (0,z-1))
 
     def view_image(pos = 100, channel = 1, slices = 20):
         fig, axes = plt.subplots(2, 2, figsize=(16, 16))
@@ -174,11 +174,7 @@ def plot_background(image, ch1, ch2, ch3):
             axes[0,1].axhline(y=pos, color='r', linestyle='-')
             axes[1,0].plot(image[slices,pos,:,channel], color='r', linestyle='-');
             axes[1,1].plot(ch2[slices,pos,:], color='r', linestyle='-');
-        if channel == 3:
-            axes[0,1].imshow(ch3[slices])
-            axes[0,1].axhline(y=pos, color='r', linestyle='-')
-            axes[1,0].plot(image[slices,pos,:,channel], color='r', linestyle='-');
-            axes[1,1].plot(ch3[slices,pos,:], color='r', linestyle='-');
+
 
 def plot_result(img, results, bbox_ML,cts, num, meta, directory, save = False, plot = True):
     if plot == True:
