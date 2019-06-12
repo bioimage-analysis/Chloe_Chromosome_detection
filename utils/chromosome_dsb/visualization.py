@@ -185,9 +185,9 @@ def plot_result(img, results, bbox_ML,cts, num, meta, directory, save = False, p
             loci = ax.scatter(y, x, s=20, facecolors='none', edgecolors='y')
         for coord, val, cell in zip(bbox_ML,cts, num):
             if val == 0:
-                circles1 = patches.Circle((coord[0]+30,coord[1]+30),30, linewidth=3,edgecolor='r',facecolor='none', alpha = 0.2)
+                circles1 = patches.Circle((coord[0]+30,coord[1]+30),32, linewidth=3,edgecolor='r',facecolor='none', alpha = 0.2)
             elif val > 0:
-                circles1 = patches.Circle((coord[0]+30,coord[1]+30),30, linewidth=3,edgecolor='r',facecolor='none')
+                circles1 = patches.Circle((coord[0]+30,coord[1]+30),32, linewidth=3,edgecolor='r',facecolor='none')
             # Add the patch to the Axes
             ax.add_patch(circles1)
             ax.text(coord[0]+15,coord[1], "Cell_{}".format(str(cell)),color = 'r', weight='bold')

@@ -201,7 +201,7 @@ def non_max_suppression(result, probaThresh=0.1, overlapThresh=0.3):
 '''
 
 def _binary(box, image):
-    ellip_base = ellipsoid(30, 30, 30, spacing=(1.05, 1.05, 2.1), levelset=False).astype("int")
+    ellip_base = ellipsoid(32, 32, 32, spacing=(1.05, 1.05, 2.1), levelset=False).astype("int")
 
     pts = np.transpose(np.nonzero(ellip_base))
     z,x,y = image.shape
@@ -255,7 +255,7 @@ def find_foci(blobs, ch1, ch3, binary, bbox_ML):
     return(blobs_new_im)
 
 def binary_select_foci(box, image, blobs_new_im):
-    ellip_base = ellipsoid(30, 30, 30, spacing=(1.05, 1.05, 2.1), levelset=False).astype("int")
+    ellip_base = ellipsoid(32, 32, 32, spacing=(1.05, 1.05, 2.1), levelset=False).astype("int")
 
     pts = np.transpose(np.nonzero(ellip_base))
     z,x,y = image.shape
