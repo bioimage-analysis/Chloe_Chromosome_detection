@@ -16,14 +16,14 @@ def _task_predict(window, clf, scaler):
 
 def rolling_window(image, clf, scaler, stepSize=8, Zstep =4, windowSize = (1,70,70)):
     z, x, y = image.shape
-    rol_view = util.view_as_windows(image, (1,70,70), step=(4,8,8))
+    rol_view = util.view_as_windows(image, (1,70,70), step=(Zstep,stepSize,stepSize))
     rol_view_flat = rol_view.reshape(-1, 70, 70)
     a, b, c = rol_view_flat.shape
     list_proba = joblib.Parallel(n_jobs=-1)(joblib.delayed(_task_predict)(window, clf, scaler) for window in rol_view_flat)
     list_proba_array = np.asarray(list_proba)
     array_proba = np.asarray(list_proba).reshape(int(a/(52*52)), 52, 52)
     result = np.zeros((z, x-70,y-70))
-    result[::4,::8,::8] = array_proba
+    result[::Zstep,::stepSize,::stepSize] = array_proba
     return(result)
 
 def non_max_suppression(result, probaThresh=0.1, overlapThresh=0.3):
@@ -201,19 +201,21 @@ def non_max_suppression(result, probaThresh=0.1, overlapThresh=0.3):
 '''
 
 def _binary(box, image):
-    ellip_base = ellipsoid(32, 32, 32, spacing=(1.05, 1.05, 2.1), levelset=False).astype("int")
+    # ellipsoid need to be 35 (it start at upper left corner) to be center. If
+    # bigger, I need to adjust when create the binary.
+    ellip_base = ellipsoid(40, 40, 40, spacing=(1.05, 1.05, 2.1), levelset=False).astype("int")
 
     pts = np.transpose(np.nonzero(ellip_base))
     z,x,y = image.shape
     # Need to add some extra padding around the z axis
-    binary = np.zeros((x, y, z+30))
+    binary = np.zeros((x+15, y+15, z+30))
     for i in range(len(box)):
-        binary[pts[:,0]+box[i,1].astype(int),
-               pts[:,1]+box[i,0].astype(int),
-               pts[:,2]+box[i,4].astype(int)] = 1
+        binary[pts[:,0]+(box[i,1].astype(int)-5),
+               pts[:,1]+(box[i,0].astype(int)-5),
+               pts[:,2]+(box[i,4].astype(int)-20)] = 1
 
     #Remove extra padding
-    return(binary[:,:,15:z+15].transpose(2,0,1))
+    return(binary[:x,:y,:z].transpose(2,0,1))
 
 def find_foci(blobs, ch1, ch3, binary, bbox_ML):
 
@@ -255,7 +257,7 @@ def find_foci(blobs, ch1, ch3, binary, bbox_ML):
     return(blobs_new_im)
 
 def binary_select_foci(box, image, blobs_new_im):
-    ellip_base = ellipsoid(32, 32, 32, spacing=(1.05, 1.05, 2.1), levelset=False).astype("int")
+    ellip_base = ellipsoid(40, 40, 40, spacing=(1.05, 1.05, 2.1), levelset=False).astype("int")
 
     pts = np.transpose(np.nonzero(ellip_base))
     z,x,y = image.shape
@@ -263,13 +265,13 @@ def binary_select_foci(box, image, blobs_new_im):
     liste = []
     box_mask = []
     for i in range(len(box)):
-        binary = np.zeros((x, y, z+30))
+        binary = np.zeros((x+15, y+15, z+30))
         mask = np.copy(blobs_new_im)
         #create elipsoid where Chromosome where found
-        binary[pts[:,0]+box[i,1].astype(int),
-               pts[:,1]+box[i,0].astype(int),
-               pts[:,2]+box[i,4].astype(int)] = 1
-        binary = binary[:,:,15:z+15].transpose(2,0,1)
+        binary[pts[:,0]+(box[i,1].astype(int)-5),
+               pts[:,1]+(box[i,0].astype(int)-5),
+               pts[:,2]+(box[i,4].astype(int)-20)] = 1
+        binary = binary[:x,:y,:z].transpose(2,0,1)
         # remove every dots that are not on a chromosome
         mask[~binary.astype(bool)] = 0
 
@@ -284,6 +286,50 @@ def binary_select_foci(box, image, blobs_new_im):
                                     np.full(len(np.where(mask>0)[0]), i)))))
     #Remove extra padding
     return(np.vstack(liste), box_mask)
+
+
+def find_foci_bis(blobs, ch1, ch3, bbox_ML, binary=None):
+
+    if len(blobs)>0:
+        blob_im = np.zeros(ch1.shape, dtype=np.int)
+        blob_im[(blobs[:,0]).astype(np.int),
+                (blobs[:,1]).astype(np.int),
+                (blobs[:,2]).astype(np.int)] = np.arange(len(blobs[:,1])) + 1
+        dilated = morphology.dilation(blob_im, morphology.ball(3))
+
+        prop = measure.regionprops(dilated)
+
+        re_labeled_blobs = np.zeros(blob_im.shape)
+        # Binary is the binary image of the chromosomes
+        if binary == None:
+            mask = _binary(bbox_ML, ch3)
+        else:
+            mask = np.copy(binary)
+            # Create binary image of ellipsoid at nucleus position
+            elli = _binary(bbox_ML, ch3)
+            # Remove chromosome/nuclues not found with the ML
+            mask[~elli.astype(bool)] = 0
+
+        blobs_new = []
+        for region in prop:
+            #Create array when binary and blobs touch (instead of just using the center)
+            cross_blob_binary = mask[list((tuple(region.coords[:,0]), tuple(region.coords[:,1]), tuple(region.coords[:,2])))]
+            if (cross_blob_binary==1).any():
+                re_labeled_blobs[tuple(region.coords.T)] = 1
+                blobs_new.append(region.centroid)
+        if len(blobs_new) == 0:
+            blobs_new_im = np.zeros(ch1.shape, dtype=np.int)
+        else:
+            blobs_new = np.asarray(blobs_new).astype(int)
+
+            blobs_new_im = np.zeros(ch3.shape, dtype=np.int)
+            blobs_new_im[(blobs_new[:,0]).astype(np.int),
+                         (blobs_new[:,1]).astype(np.int),
+                         (blobs_new[:,2]).astype(np.int)] = np.arange(len(blobs_new[:,1])) + 1
+    else:
+        blobs_new_im = np.zeros(ch1.shape, dtype=np.int)
+
+    return(blobs_new_im)
 
 def find_duplicate(selected_blobs, bb_mask):
     unq, unq_idx, unq_cnt = np.unique(selected_blobs[:,0:3],

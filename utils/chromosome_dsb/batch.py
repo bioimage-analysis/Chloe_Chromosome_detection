@@ -36,7 +36,6 @@ def batch_analysis(path, clf, scaler, folder_batch, skelete, parameters = {}):
         Additional keyword-argument to be pass to the function:
          - imageformat
     """
-
     imageformat= ('D3D_ALX.dv')
     FOCI_ch= parameters.get('FOCI_ch')
     Nucleus_ch= parameters.get('Nucleus_ch')
@@ -69,7 +68,7 @@ def batch_analysis(path, clf, scaler, folder_batch, skelete, parameters = {}):
         # Find the chromosome
         print("searching nucleus")
         result = search.rolling_window(img, clf, scaler)
-        bbox_ML = search.non_max_suppression(result, probaThresh=0.8, overlapThresh=0.3)
+        bbox_ML = search.non_max_suppression(result, probaThresh=0.5, overlapThresh=0.3)
         if len(bbox_ML)>0:
             #Substract background
             print("substract background")
@@ -77,6 +76,7 @@ def batch_analysis(path, clf, scaler, folder_batch, skelete, parameters = {}):
             Nucleus, _ = img_analysis.background_correct(image, ch=Nucleus_ch, size=back_sub_Nucleus)
             # Find the FOCI
             print("finding FOCI")
+
             blobs = img_analysis.find_blob(FOCI, meta, directory, smaller = smaller,
                                    largest = largest, thresh = thresh,
                                    plot=False, save=True)

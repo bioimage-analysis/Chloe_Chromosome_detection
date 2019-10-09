@@ -137,6 +137,8 @@ def _plot_learning_curve(estimator, title, X, Y, ylim=None, cv=None,
              label="Cross-validation score")
 
     plt.legend(loc="best")
+
+    plt.savefig('/Users/Espenel/Desktop/learning_curve.pdf', bbox_inches="tight", pad_inches=0,transparent=True)
     return plt
 
 def plot_learning_curve(dat, Y, estimator, title = "linear SVC"):
@@ -149,7 +151,7 @@ def plot_learning_curve(dat, Y, estimator, title = "linear SVC"):
 
 def heatmap(result):
 
-    heat_map = np.pad(result, ((0,0), (0,70),(0,70)), 'constant')
+    heat_map = np.pad(result, ((0,0), (35,35),(35,35)), 'constant')
 
     return gaussian(heat_map, sigma=4)
 

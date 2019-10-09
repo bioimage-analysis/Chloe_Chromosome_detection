@@ -1,4 +1,4 @@
-ipywidgets==7.4.2
+ipywidgets==7.5.0
 itkwidgets==0.16.1
 javabridge==1.0.17
 joblib==0.13.2
@@ -6,6 +6,7 @@ matplotlib==2.2.3
 numpy==1.16.2
 pandas==0.23.4
 python-bioformats==1.5.2
-scikit-image==0.14.2
+scikit-image==0.15.0
 scikit-learn==0.20.0
-scipy==1.1.0
+scipy==1.2.0
+napari==0.2.0

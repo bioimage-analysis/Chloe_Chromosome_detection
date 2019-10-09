@@ -58,8 +58,10 @@ def find_blob(img, meta, directory, smaller = 1, largest = 5, thresh = 60, plot=
                      max_sigma=largest, threshold=thresh)
     if plot == True:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 10))
-        ax1.imshow(np.amax(img,axis=0), vmax=img.max()/1.8)
-        ax2.imshow(np.amax(img,axis=0), vmax=img.max()/1.8)
+        ax1.imshow(np.amax(img,axis=0), vmax=img.max()/1.8, cmap="viridis")
+        ax1.axis('off')
+        ax2.imshow(np.amax(img,axis=0), vmax=img.max()/1.8, cmap="viridis")
+        ax2.axis('off')
         for blob in blobs:
             z,x,y,s = blob
             loci = ax2.scatter(y, x, s=40, facecolors='none', edgecolors='y')
@@ -72,8 +74,10 @@ def find_blob(img, meta, directory, smaller = 1, largest = 5, thresh = 60, plot=
     elif plot ==False:
         plt.ioff()
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 10))
-        ax1.imshow(np.amax(img,axis=0), vmax=img.max()/1.8)
-        ax2.imshow(np.amax(img,axis=0), vmax=img.max()/1.8)
+        ax1.imshow(np.amax(img,axis=0), vmax=img.max()/1.8, cmap="viridis")
+        ax1.axis('off')
+        ax2.imshow(np.amax(img,axis=0), vmax=img.max()/1.8, cmap="viridis")
+        ax2.axis('off')
         for blob in blobs:
             z,x,y,s = blob
             loci = ax2.scatter(y, x, s=40, facecolors='none', edgecolors='y')
