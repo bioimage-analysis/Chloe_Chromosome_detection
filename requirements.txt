@@ -1,7 +1,7 @@
 ipywidgets==7.5.0
 itkwidgets==0.16.1
 javabridge==1.0.17
-joblib==0.13.2
+joblib==1.2.0
 matplotlib==2.2.3
 numpy==1.16.2
 pandas==0.23.4
